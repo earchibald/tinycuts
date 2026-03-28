@@ -38,7 +38,7 @@ This skill enables a **marketplace of macOS automation capabilities delivered as
 | Key | Type | Description |
 |-----|------|-------------|
 | `WFWorkflowActions` | Array | The action sequence (core of the shortcut) |
-| `WFWorkflowClientVersion` | Integer | Client version number |
+| `WFWorkflowClientVersion` | String | Client version string (must be string — WorkflowKit calls string methods on this value) |
 | `WFWorkflowClientRelease` | String | Semantic version string |
 | `WFWorkflowMinimumClientVersion` | Integer | Minimum version required to run |
 | `WFWorkflowMinimumClientVersionString` | String | Minimum version as string (e.g., "1700" for macOS 26) |
@@ -451,7 +451,7 @@ def make_shortcut(name, actions,
     return {
         "WFWorkflowMinimumClientVersionString": "1700",
         "WFWorkflowMinimumClientVersion": 1700,
-        "WFWorkflowClientVersion": 1700,
+        "WFWorkflowClientVersion": "1700",
         "WFWorkflowClientRelease": "26.0",
         "WFWorkflowIcon": {
             "WFWorkflowIconStartColor": icon_color,

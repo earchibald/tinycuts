@@ -1334,6 +1334,7 @@ Follow these steps for every shortcut:
 | Variable shows as blank | `OutputUUID` doesn't match producing action's `UUID` | Verify UUID strings match exactly |
 | Control flow doesn't group correctly | Mismatched `GroupingIdentifier` | All actions in a block must share the same GID |
 | Apple Intelligence action fails | AI not enabled or wrong identifier | Check System Settings and identifier |
+| `shortcuts sign` prints ObjC warnings/crash trace to stderr | macOS 26 beta runtime warnings | Check exit code, not stderr — signing succeeds if exit code is 0 |
 
 ### Limitations
 
