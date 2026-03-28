@@ -39,6 +39,56 @@ def make_shortcut(name, actions,
     }
 
 
+def new_uuid():
+    """Generate an uppercase UUID for action output linking."""
+    return str(uuid.uuid4()).upper()
+
+
+def make_attachment(output_uuid, output_name):
+    """Create a WFTextTokenAttachment referencing a previous action's output."""
+    return {
+        "Value": {
+            "OutputName": output_name,
+            "OutputUUID": output_uuid,
+            "Type": "ActionOutput",
+        },
+        "WFSerializationType": "WFTextTokenAttachment",
+    }
+
+
+def make_magic_variable(variable_name):
+    """Create a WFTextTokenAttachment for a magic variable (e.g., 'Repeat Item')."""
+    return {
+        "Value": {
+            "Type": "Variable",
+            "VariableName": variable_name,
+        },
+        "WFSerializationType": "WFTextTokenAttachment",
+    }
+
+
+def make_text_with_variable(text_before, output_uuid, output_name, text_after=""):
+    """Create a WFTextTokenString with a variable embedded in text."""
+    # Note: position uses NSString character indices (UTF-16 code units).
+    # len() works for ASCII/BMP text. For emoji/non-BMP chars,
+    # use: position = len(text_before.encode('utf-16-le')) // 2
+    position = len(text_before)
+    full_string = text_before + "\ufffc" + text_after
+    return {
+        "Value": {
+            "string": full_string,
+            "attachmentsByRange": {
+                f"{{{position}, 1}}": {
+                    "OutputName": output_name,
+                    "OutputUUID": output_uuid,
+                    "Type": "ActionOutput",
+                }
+            },
+        },
+        "WFSerializationType": "WFTextTokenString",
+    }
+
+
 # === ACTIONS GO HERE ===
 actions = []
 
