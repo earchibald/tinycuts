@@ -1292,3 +1292,160 @@ actions = [
     },
 ]
 ```
+
+---
+
+## Build & Sign Workflow
+
+Follow these steps for every shortcut:
+
+1. Define the shortcut's purpose and I/O contract
+2. Copy `resources/builder_template.py`
+3. Assemble actions from the catalog into the `actions` list
+4. Run the script to produce `unsigned.shortcut`
+5. Validate with `plutil -lint unsigned.shortcut`
+6. Debug with `plutil -convert xml1 -o debug.xml unsigned.shortcut` (if needed)
+7. Sign with `shortcuts sign -m anyone -i unsigned.shortcut -o signed.shortcut`
+8. Import with `open signed.shortcut` (user confirms import dialog)
+9. Test with `shortcuts run <name> --input-path - --output-path -`
+10. Iterate on steps 3–9 until correct
+11. Copy `resources/plugin_template/`, fill in SKILL.md with I/O contract
+12. Publish
+
+---
+
+## Debugging & Troubleshooting
+
+### Validation Steps
+
+1. `plutil -lint unsigned.shortcut` — catches malformed plists
+2. `plutil -convert xml1 -o debug.xml unsigned.shortcut` — human-readable XML
+3. If `shortcuts sign` fails — check stderr for cause
+4. `open signed.shortcut` — test import dialog appears
+5. `echo "test" | shortcuts run "Name" --input-path - --output-path - 2>&1` — test execution
+
+### Common Failure Modes
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `shortcuts sign` exits non-zero | Malformed plist | Run `plutil -lint` and fix structure |
+| Import dialog shows but shortcut is empty | `WFWorkflowActions` is empty/malformed | Inspect XML, check action dicts |
+| Shortcut runs but produces no output | Missing `UUID` on output-producing actions | Add `UUID` key |
+| Variable shows as blank | `OutputUUID` doesn't match producing action's `UUID` | Verify UUID strings match exactly |
+| Control flow doesn't group correctly | Mismatched `GroupingIdentifier` | All actions in a block must share the same GID |
+| Apple Intelligence action fails | AI not enabled or wrong identifier | Check System Settings and identifier |
+
+### Limitations
+
+- No automated import (confirmation dialog required)
+- No programmatic uninstall
+- Signing requires network for `-m anyone`
+
+---
+
+## Plugin Packaging
+
+### Directory Structure
+
+Published plugin directories follow this layout:
+
+```
+my-shortcut-plugin/
+├── SKILL.md                    # I/O contract, usage docs
+├── shortcuts/
+│   └── my-shortcut.shortcut    # Signed .shortcut file
+├── scripts/
+│   ├── install.sh              # Imports via `open`
+│   └── uninstall.sh            # Best-effort removal guidance
+└── src/
+    └── build.py                # Builder script (for transparency)
+```
+
+See `resources/plugin_template/` for skeleton templates.
+
+### I/O Contract Schema
+
+Each plugin's SKILL.md must include a contract block:
+
+```yaml
+shortcut:
+  name: "My Shortcut"
+  input: stdin/text
+  output: stdout/text
+  requires:
+    macos: "26"
+    apple-intelligence: true
+  permissions:
+    - clipboard-read
+    - notifications
+```
+
+### Allowed `input` Values
+
+| Value | Meaning | CLI invocation |
+|-------|---------|----------------|
+| `stdin/text` | Accepts text via stdin | `echo "..." \| shortcuts run "Name" --input-path -` |
+| `stdin/file` | Accepts file data via stdin | `cat file.pdf \| shortcuts run "Name" --input-path -` |
+| `file-path` | Accepts a file path as text input | `echo "/path/to/file" \| shortcuts run "Name" --input-path -` |
+| `clipboard` | Reads from system clipboard | `shortcuts run "Name"` |
+| `none` | No input required | `shortcuts run "Name"` |
+
+### Allowed `output` Values
+
+| Value | Meaning | CLI invocation |
+|-------|---------|----------------|
+| `stdout/text` | Outputs text to stdout | `shortcuts run "Name" --output-path -` |
+| `stdout/file` | Outputs file data to stdout | `shortcuts run "Name" --output-path - --output-type public.png` |
+| `file-path` | Writes to a file, outputs path | `shortcuts run "Name" --output-path -` |
+| `clipboard` | Sets system clipboard | `shortcuts run "Name"` |
+| `notification` | Shows a notification | `shortcuts run "Name"` |
+| `none` | No output (side-effect only) | `shortcuts run "Name"` |
+
+### Allowed `permissions` Values
+
+`clipboard-read`, `clipboard-write`, `notifications`, `screenshots`, `file-read`, `file-write`, `calendar-read`, `calendar-write`, `reminders-read`, `reminders-write`, `mail-send`, `location`, `network`
+
+---
+
+## Commenting Requirements
+
+Shortcuts must be **thoroughly commented**. Users can inspect shortcuts when choosing whether to install them.
+
+Requirements:
+
+1. **Header comment** — First action: what it does, I/O, requirements
+2. **Section comments** — Before each logical group
+3. **Control flow comments** — Explain branching logic
+4. **Variable comments** — Explain non-obvious variables
+5. **Integration comments** — Note permissions for app-specific/AI actions
+
+Use the `make_comment()` helper (defined in `resources/builder_template.py`) to insert comment actions.
+
+---
+
+## External References
+
+### Apple Official
+
+- [Shortcuts User Guide for Mac](https://support.apple.com/guide/shortcuts-mac/welcome/mac)
+- [Use Apple Intelligence in Shortcuts](https://support.apple.com/guide/mac-help/use-apple-intelligence-in-shortcuts-mchl91750563/mac)
+- [What's new in Shortcuts for macOS 26](https://support.apple.com/en-us/125148)
+- [Run shortcuts from the command line](https://support.apple.com/guide/shortcuts-mac/run-shortcuts-from-the-command-line-apd455c82f02/mac)
+
+### Community Format Documentation
+
+- [Zachary7829's Shortcuts File Format](https://zachary7829.github.io/blog/shortcuts/fileformat)
+- [Cherri File Format](https://cherrilang.org/compiler/file-format.html)
+- [iOS-Shortcuts-Reference (GitHub)](https://github.com/sebj/iOS-Shortcuts-Reference)
+- [0xdevalias decompilation notes](https://gist.github.com/0xdevalias/27d9aea9529be7b6ce59055332a94477)
+
+### Tools & Projects (Reference Only)
+
+- [Cherri](https://github.com/electrikmilk/cherri) — Go-based shortcuts compiler
+- [shortcuts-js](https://github.com/joshfarrant/shortcuts-js) — Node.js shortcuts builder
+- Python `plistlib` — [stdlib docs](https://docs.python.org/3/library/plistlib.html)
+
+### Apple Intelligence Coverage
+
+- [9to5Mac: 25+ new Shortcuts actions in iOS 26](https://9to5mac.com/2025/12/09/ios-26s-shortcuts-app-adds-25-new-actions-heres-everything-new/)
+- [MacObserver: All 25+ new actions](https://www.macobserver.com/news/all-25-new-shortcuts-actions-introduced-in-ios-26-heres-everything-you-can-do/)
