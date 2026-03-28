@@ -1,0 +1,17 @@
+#!/bin/bash
+# Uninstall script for {{SHORTCUT_NAME}}
+# Note: macOS does not provide a CLI to remove shortcuts.
+# This script provides guidance for manual removal.
+
+set -e
+
+echo "To uninstall {{SHORTCUT_NAME}}:"
+echo ""
+echo "1. Open the Shortcuts app"
+echo "2. Find '{{SHORTCUT_NAME}}' in your shortcuts list"
+echo "3. Right-click (or Control-click) the shortcut"
+echo "4. Select 'Delete'"
+echo "5. Confirm deletion"
+echo ""
+echo "Note: There is no programmatic way to remove a shortcut on macOS."
+echo "This is a known limitation of the Shortcuts platform."

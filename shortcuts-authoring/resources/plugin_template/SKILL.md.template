@@ -1,0 +1,59 @@
+---
+name: {{SHORTCUT_NAME}}
+description: {{DESCRIPTION}}
+version: 1.0.0
+author: {{AUTHOR}}
+tags:
+  - macos
+  - shortcuts
+  - automation
+---
+
+# {{SHORTCUT_NAME}}
+
+{{DESCRIPTION}}
+
+## I/O Contract
+
+```yaml
+shortcut:
+  name: "{{SHORTCUT_NAME}}"
+  input: {{INPUT_TYPE}}
+  output: {{OUTPUT_TYPE}}
+  requires:
+    macos: "26"
+    apple-intelligence: {{REQUIRES_AI}}
+  permissions:
+{{PERMISSIONS}}
+```
+
+## Usage
+
+### From CLI
+
+```bash
+{{CLI_EXAMPLE}}
+```
+
+### From an agent
+
+This shortcut is designed to be invoked via `shortcuts run`. See the I/O contract above for input/output format.
+
+## Installation
+
+Run the install script to import the shortcut:
+
+```bash
+bash scripts/install.sh
+```
+
+You will be prompted to confirm the import in Shortcuts.app.
+
+## How It Works
+
+{{HOW_IT_WORKS}}
+
+## Requirements
+
+- macOS 26 or later
+{{ADDITIONAL_REQUIREMENTS}}

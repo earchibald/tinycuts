@@ -1,0 +1,25 @@
+#!/bin/bash
+# Install script for {{SHORTCUT_NAME}}
+# Opens the signed shortcut file, triggering the Shortcuts.app import dialog.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SHORTCUT_FILE="$SCRIPT_DIR/../shortcuts/{{SHORTCUT_FILENAME}}"
+
+# Check Python availability (needed if rebuilding from source)
+if ! command -v python3 &> /dev/null; then
+    echo "Warning: python3 not found. Install via: xcode-select --install"
+    echo "Python is only needed to rebuild shortcuts from source (src/build.py)."
+fi
+
+# Check shortcut file exists
+if [ ! -f "$SHORTCUT_FILE" ]; then
+    echo "Error: Shortcut file not found at $SHORTCUT_FILE"
+    echo "You may need to rebuild it: cd $SCRIPT_DIR/../src && python3 build.py"
+    exit 1
+fi
+
+echo "Importing {{SHORTCUT_NAME}}..."
+echo "You will be prompted to confirm in Shortcuts.app."
+open "$SHORTCUT_FILE"
