@@ -89,6 +89,135 @@ def make_text_with_variable(text_before, output_uuid, output_name, text_after=""
     }
 
 
+def make_comment(text):
+    """Create a comment action visible in the Shortcuts editor."""
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
+        "WFWorkflowActionParameters": {
+            "WFCommentActionText": text,
+        },
+    }
+
+
+def make_if_block(condition, condition_value, then_actions, else_actions=None):
+    """Create If/Otherwise/End If with shared GroupingIdentifier."""
+    gid = new_uuid()
+    end_uuid = new_uuid()
+    actions = []
+    if_params = {
+        "GroupingIdentifier": gid,
+        "WFControlFlowMode": 0,
+        "WFCondition": condition,
+    }
+    if condition_value is not None:
+        if_params["WFConditionalActionString"] = condition_value
+    actions.append({
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": if_params,
+    })
+    actions.extend(then_actions)
+    if else_actions:
+        actions.append({
+            "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+            "WFWorkflowActionParameters": {
+                "GroupingIdentifier": gid,
+                "WFControlFlowMode": 1,
+            },
+        })
+        actions.extend(else_actions)
+    actions.append({
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "UUID": end_uuid,
+            "WFControlFlowMode": 2,
+        },
+    })
+    return actions
+
+
+def make_repeat_count(count, body_actions):
+    """Create Repeat N Times / End Repeat with shared GroupingIdentifier."""
+    gid = new_uuid()
+    end_uuid = new_uuid()
+    actions = [{
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "WFControlFlowMode": 0,
+            "WFRepeatCount": count,
+        },
+    }]
+    actions.extend(body_actions)
+    actions.append({
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "UUID": end_uuid,
+            "WFControlFlowMode": 2,
+        },
+    })
+    return actions
+
+
+def make_repeat_each(input_ref, body_actions):
+    """Create Repeat with Each / End Repeat with shared GroupingIdentifier."""
+    gid = new_uuid()
+    end_uuid = new_uuid()
+    actions = [{
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.each",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "WFControlFlowMode": 0,
+            "WFInput": input_ref,
+        },
+    }]
+    actions.extend(body_actions)
+    actions.append({
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.each",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "UUID": end_uuid,
+            "WFControlFlowMode": 2,
+        },
+    })
+    return actions
+
+
+def make_menu(prompt, items, case_actions_map):
+    """Create Choose from Menu with cases."""
+    gid = new_uuid()
+    end_uuid = new_uuid()
+    actions = [{
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "WFControlFlowMode": 0,
+            "WFMenuItems": items,
+            "WFMenuPrompt": prompt,
+        },
+    }]
+    for item in items:
+        actions.append({
+            "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+            "WFWorkflowActionParameters": {
+                "GroupingIdentifier": gid,
+                "WFControlFlowMode": 1,
+                "WFMenuItemTitle": item,
+            },
+        })
+        actions.extend(case_actions_map.get(item, []))
+    actions.append({
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": gid,
+            "UUID": end_uuid,
+            "WFControlFlowMode": 2,
+        },
+    })
+    return actions
+
+
 # === ACTIONS GO HERE ===
 actions = []
 

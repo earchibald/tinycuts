@@ -10,6 +10,10 @@ from builder_template import make_shortcut
 from builder_template import (
     new_uuid, make_attachment, make_magic_variable, make_text_with_variable,
 )
+from builder_template import (
+    make_comment, make_if_block, make_repeat_count,
+    make_repeat_each, make_menu,
+)
 import re
 
 
@@ -91,3 +95,72 @@ def test_make_text_with_variable_at_start():
     result = make_text_with_variable("", "UUID-1", "Name", " suffix")
     assert result["Value"]["string"] == "\ufffc suffix"
     assert "{0, 1}" in result["Value"]["attachmentsByRange"]
+
+
+def test_make_comment():
+    result = make_comment("This is a comment")
+    assert result["WFWorkflowActionIdentifier"] == "is.workflow.actions.comment"
+    assert result["WFWorkflowActionParameters"]["WFCommentActionText"] == "This is a comment"
+
+
+def test_make_if_block_structure():
+    then_action = {"WFWorkflowActionIdentifier": "test.then", "WFWorkflowActionParameters": {}}
+    result = make_if_block("Equals", "hello", [then_action])
+    assert len(result) == 3
+    assert result[0]["WFWorkflowActionIdentifier"] == "is.workflow.actions.conditional"
+    assert result[0]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 0
+    assert result[0]["WFWorkflowActionParameters"]["WFCondition"] == "Equals"
+    assert result[0]["WFWorkflowActionParameters"]["WFConditionalActionString"] == "hello"
+    assert result[1]["WFWorkflowActionIdentifier"] == "test.then"
+    assert result[2]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 2
+    gid = result[0]["WFWorkflowActionParameters"]["GroupingIdentifier"]
+    assert result[2]["WFWorkflowActionParameters"]["GroupingIdentifier"] == gid
+
+
+def test_make_if_block_with_else():
+    then_action = {"WFWorkflowActionIdentifier": "test.then", "WFWorkflowActionParameters": {}}
+    else_action = {"WFWorkflowActionIdentifier": "test.else", "WFWorkflowActionParameters": {}}
+    result = make_if_block("Has Any Value", None, [then_action], [else_action])
+    assert len(result) == 5
+    assert result[0]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 0
+    assert "WFConditionalActionString" not in result[0]["WFWorkflowActionParameters"]
+    assert result[2]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 1
+    assert result[4]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 2
+
+
+def test_make_repeat_count_structure():
+    body = [{"WFWorkflowActionIdentifier": "test.body", "WFWorkflowActionParameters": {}}]
+    result = make_repeat_count(5, body)
+    assert len(result) == 3
+    assert result[0]["WFWorkflowActionIdentifier"] == "is.workflow.actions.repeat.count"
+    assert result[0]["WFWorkflowActionParameters"]["WFRepeatCount"] == 5
+    assert result[0]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 0
+    assert result[2]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 2
+    gid = result[0]["WFWorkflowActionParameters"]["GroupingIdentifier"]
+    assert result[2]["WFWorkflowActionParameters"]["GroupingIdentifier"] == gid
+
+
+def test_make_repeat_each_structure():
+    input_ref = make_attachment("UUID-1", "Items")
+    body = [{"WFWorkflowActionIdentifier": "test.body", "WFWorkflowActionParameters": {}}]
+    result = make_repeat_each(input_ref, body)
+    assert len(result) == 3
+    assert result[0]["WFWorkflowActionIdentifier"] == "is.workflow.actions.repeat.each"
+    assert result[0]["WFWorkflowActionParameters"]["WFInput"] == input_ref
+    assert result[0]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 0
+    assert result[2]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 2
+
+
+def test_make_menu_structure():
+    case_actions = {
+        "Option A": [{"WFWorkflowActionIdentifier": "test.a", "WFWorkflowActionParameters": {}}],
+        "Option B": [{"WFWorkflowActionIdentifier": "test.b", "WFWorkflowActionParameters": {}}],
+    }
+    result = make_menu("Pick one", ["Option A", "Option B"], case_actions)
+    assert len(result) == 6
+    assert result[0]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 0
+    assert result[0]["WFWorkflowActionParameters"]["WFMenuItems"] == ["Option A", "Option B"]
+    assert result[0]["WFWorkflowActionParameters"]["WFMenuPrompt"] == "Pick one"
+    assert result[1]["WFWorkflowActionParameters"]["WFMenuItemTitle"] == "Option A"
+    assert result[3]["WFWorkflowActionParameters"]["WFMenuItemTitle"] == "Option B"
+    assert result[5]["WFWorkflowActionParameters"]["WFControlFlowMode"] == 2
