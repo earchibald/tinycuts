@@ -23,7 +23,7 @@ def test_make_shortcut_returns_valid_plist_structure():
     assert result["WFWorkflowActions"] == []
     assert result["WFWorkflowMinimumClientVersionString"] == "1700"
     assert result["WFWorkflowMinimumClientVersion"] == 1700
-    assert result["WFWorkflowClientVersion"] == 1700
+    assert result["WFWorkflowClientVersion"] == "1700"
     assert result["WFWorkflowClientRelease"] == "26.0"
     assert "WFWorkflowIcon" in result
     assert result["WFWorkflowIcon"]["WFWorkflowIconStartColor"] == 0x4B0082

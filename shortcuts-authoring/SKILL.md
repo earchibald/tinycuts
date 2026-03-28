@@ -66,7 +66,7 @@ Use this skill when building a shortcut plugin that automates macOS: app control
 | Key | Type | Description |
 |-----|------|-------------|
 | `WFWorkflowActions` | Array | The action sequence (core of the shortcut) |
-| `WFWorkflowClientVersion` | Integer | Client version number (e.g., `1700` for macOS 26) |
+| `WFWorkflowClientVersion` | String | Client version string (e.g., `"1700"` for macOS 26). Must be a string — WorkflowKit's migration code calls string methods on this value. |
 | `WFWorkflowClientRelease` | String | Semantic version string (e.g., `"26.0"`) |
 | `WFWorkflowMinimumClientVersion` | Integer | Minimum version required to run |
 | `WFWorkflowMinimumClientVersionString` | String | Minimum version as string (e.g., `"1700"`) |

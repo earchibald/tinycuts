@@ -19,7 +19,7 @@ def make_shortcut(name, actions,
     return {
         "WFWorkflowMinimumClientVersionString": "1700",
         "WFWorkflowMinimumClientVersion": 1700,
-        "WFWorkflowClientVersion": 1700,
+        "WFWorkflowClientVersion": "1700",
         "WFWorkflowClientRelease": "26.0",
         "WFWorkflowIcon": {
             "WFWorkflowIconStartColor": icon_color,
