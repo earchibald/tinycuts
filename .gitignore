@@ -1,0 +1,13 @@
+# Build artifacts
+*.shortcut
+unsigned.shortcut
+signed.shortcut
+debug.xml
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store
