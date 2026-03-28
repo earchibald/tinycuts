@@ -197,3 +197,1098 @@ Modes:
 Import via `open signed.shortcut` (triggers Shortcuts.app import dialog — user must confirm).
 
 > **Ref:** [Run shortcuts from the command line — Apple Support](https://support.apple.com/guide/shortcuts-mac/run-shortcuts-from-the-command-line-apd455c82f02/mac)
+
+## Action Catalog
+
+### Tier 1: App Automation
+
+#### Open App
+
+**Identifier:** `is.workflow.actions.openapp`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFAppIdentifier` | String | No | Bundle ID of the app to open (e.g., `"com.apple.Safari"`) |
+| `WFSelectedApp` | Dict | No | Dict with `BundleIdentifier` and `Name` keys |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.openapp",
+    "WFWorkflowActionParameters": {
+        "WFAppIdentifier": "com.apple.Safari",
+        "WFSelectedApp": {
+            "BundleIdentifier": "com.apple.Safari",
+            "Name": "Safari",
+        },
+    },
+}
+```
+
+**Variable wiring example:** Open App does not produce output; no chaining needed.
+
+> **Note on app-specific actions:** Mail, Calendar, Reminders, Notes, Finder, Safari, and Maps have their own action identifiers that follow the pattern `is.workflow.actions.<verb><appname>` (e.g., `is.workflow.actions.mail.send`). Exact identifiers for app-specific actions should be extracted at runtime from the Shortcuts.app action library or from Apple gallery shortcuts.
+
+---
+
+### Tier 2: File System
+
+#### Get File
+
+**Identifier:** `is.workflow.actions.documentpicker.open`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFFile` | Variable ref | No | Variable reference to the file to open |
+| `WFGetFilePath` | String | No | Path to the file to open |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+get_file_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
+    "WFWorkflowActionParameters": {
+        "WFGetFilePath": "/Users/me/Documents/notes.txt",
+        "UUID": get_file_uuid,
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+get_file_uuid = new_uuid()
+notify_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
+        "WFWorkflowActionParameters": {
+            "WFGetFilePath": "/Users/me/Documents/notes.txt",
+            "UUID": get_file_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+        "WFWorkflowActionParameters": {
+            "WFNotificationActionBody": make_attachment(get_file_uuid, "Get File"),
+            "WFNotificationActionTitle": "File Contents",
+        },
+    },
+]
+```
+
+---
+
+#### Save File
+
+**Identifier:** `is.workflow.actions.documentpicker.save`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFInput` | Variable ref | Yes | Variable reference to the content to save |
+| `WFFileDestinationPath` | String/Variable | No | Destination path for the file |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+    "WFWorkflowActionParameters": {
+        "WFInput": make_attachment(source_uuid, "Previous Action"),
+        "WFFileDestinationPath": "/Users/me/Documents/output.txt",
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+# Chain: Get Clipboard → Save File
+clipboard_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+        "WFWorkflowActionParameters": {"UUID": clipboard_uuid},
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+        "WFWorkflowActionParameters": {
+            "WFInput": make_attachment(clipboard_uuid, "Clipboard"),
+            "WFFileDestinationPath": "/Users/me/Desktop/clipboard.txt",
+        },
+    },
+]
+```
+
+---
+
+#### Get Folder Contents
+
+**Identifier:** `is.workflow.actions.file.getfoldercontents`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFFolder` | Variable ref | Yes | Variable reference to the folder |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+folder_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.getfoldercontents",
+    "WFWorkflowActionParameters": {
+        "WFFolder": make_attachment(source_uuid, "Folder"),
+        "UUID": folder_uuid,
+    },
+}
+```
+
+---
+
+#### Rename File
+
+**Identifier:** `is.workflow.actions.file.rename`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFFile` | Variable ref | Yes | Variable reference to the file to rename |
+| `WFNewFilename` | String | Yes | New filename (without path) |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.rename",
+    "WFWorkflowActionParameters": {
+        "WFFile": make_attachment(file_uuid, "Get File"),
+        "WFNewFilename": "renamed_file.txt",
+    },
+}
+```
+
+---
+
+### Tier 3: System Services
+
+#### Get Clipboard
+
+**Identifier:** `is.workflow.actions.getclipboard`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+clipboard_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+    "WFWorkflowActionParameters": {"UUID": clipboard_uuid},
+}
+```
+
+---
+
+#### Set Clipboard
+
+**Identifier:** `is.workflow.actions.setclipboard`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFInput` | Variable ref | Yes | Variable reference to the content to copy to clipboard |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.setclipboard",
+    "WFWorkflowActionParameters": {
+        "WFInput": make_attachment(source_uuid, "Previous Action"),
+    },
+}
+```
+
+---
+
+#### Take Screenshot
+
+**Identifier:** `is.workflow.actions.takescreenshot`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFScreenshotType` | String | No | `"Full Screen"`, `"Window"`, or `"Interactive"` (default: `"Full Screen"`) |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+screenshot_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.takescreenshot",
+    "WFWorkflowActionParameters": {
+        "WFScreenshotType": "Full Screen",
+        "UUID": screenshot_uuid,
+    },
+}
+```
+
+---
+
+#### Show Notification
+
+**Identifier:** `is.workflow.actions.notification`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFNotificationActionBody` | String/Variable | Yes | Body text of the notification |
+| `WFNotificationActionTitle` | String | No | Title of the notification |
+| `WFNotificationActionSound` | Bool | No | Whether to play a sound (default: `True`) |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+    "WFWorkflowActionParameters": {
+        "WFNotificationActionBody": make_attachment(source_uuid, "Previous Action"),
+        "WFNotificationActionTitle": "Alert",
+        "WFNotificationActionSound": True,
+    },
+}
+```
+
+**Common pattern: Get Clipboard → Summarize → Notify**
+
+```python
+# Common Pattern: Get Clipboard → Summarize → Notify
+clipboard_uuid = new_uuid()
+summary_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+        "WFWorkflowActionParameters": {"UUID": clipboard_uuid},
+    },
+    {
+        "WFWorkflowActionIdentifier":
+            "com.apple.WritingTools.WritingToolsAppIntentsExtension.SummarizeTextIntent",
+        "WFWorkflowActionParameters": {
+            "text": make_attachment(clipboard_uuid, "Clipboard"),
+            "summaryType": "summarize",
+            "UUID": summary_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+        "WFWorkflowActionParameters": {
+            "WFNotificationActionBody": make_attachment(summary_uuid, "Summarize Text"),
+            "WFNotificationActionTitle": "Clipboard Summary",
+        },
+    },
+]
+```
+
+---
+
+### Tier 4: Scripting
+
+#### Run JavaScript for Automation (JXA)
+
+**Identifier:** `is.workflow.actions.runjavascript`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFJavaScript` | String | Yes | JavaScript for Automation (JXA) source code to run |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+jxa_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascript",
+    "WFWorkflowActionParameters": {
+        "WFJavaScript": "Application('Finder').home().name()",
+        "UUID": jxa_uuid,
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+jxa_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascript",
+        "WFWorkflowActionParameters": {
+            "WFJavaScript": "Application('System Events').frontmost().name()",
+            "UUID": jxa_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+        "WFWorkflowActionParameters": {
+            "WFNotificationActionBody": make_attachment(jxa_uuid, "Run JavaScript for Automation"),
+            "WFNotificationActionTitle": "Front App",
+        },
+    },
+]
+```
+
+---
+
+#### URL
+
+**Identifier:** `is.workflow.actions.url`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFURLActionURL` | String/Variable | Yes | The URL string or variable |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+url_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.url",
+    "WFWorkflowActionParameters": {
+        "WFURLActionURL": "https://example.com",
+        "UUID": url_uuid,
+    },
+}
+```
+
+---
+
+#### Open URL
+
+**Identifier:** `is.workflow.actions.openurl`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFInput` | Variable ref | Yes | Variable reference to the URL to open |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
+    "WFWorkflowActionParameters": {
+        "WFInput": make_attachment(url_uuid, "URL"),
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+url_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.url",
+        "WFWorkflowActionParameters": {
+            "WFURLActionURL": "https://apple.com",
+            "UUID": url_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
+        "WFWorkflowActionParameters": {
+            "WFInput": make_attachment(url_uuid, "URL"),
+        },
+    },
+]
+```
+
+---
+
+### Tier 5: Apple Intelligence
+
+> **Requires:** macOS 15.1+ (Sequoia) with Apple Intelligence enabled. All identifiers below are verified from the macOS 26 system.
+
+> **Ref:** [Use Apple Intelligence in Shortcuts](https://support.apple.com/guide/mac-help/use-apple-intelligence-in-shortcuts-mchl91750563/mac). Identifiers extracted from Apple gallery shortcuts in `WorkflowKit.framework/Resources/Gallery.bundle/`.
+
+#### Use Model
+
+**Identifier:** `is.workflow.actions.askllm`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+**Direct model aliases:**
+- `com.apple.Shortcuts.AskAFMAction3B` — on-device model
+- `com.apple.Shortcuts.AskMontaraAction` — server/PCC model
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFLLMPrompt` | Text/Variable | Yes | The prompt to send to the model |
+| `WFLLMModel` | String | No | Model to use (default: `"Apple Intelligence"`) |
+| `WFGenerativeResultType` | String | No | Output format: `"Text"`, `"List"`, `"Dictionary"`, `"Automatic"` |
+| `FollowUp` | Bool | No | Whether this is a follow-up in a conversation |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+llm_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.askllm",
+    "WFWorkflowActionParameters": {
+        "WFLLMPrompt": make_attachment(input_uuid, "Input"),
+        "WFLLMModel": "Apple Intelligence",
+        "WFGenerativeResultType": "Text",
+        "FollowUp": False,
+        "UUID": llm_uuid,
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+clipboard_uuid = new_uuid()
+llm_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+        "WFWorkflowActionParameters": {"UUID": clipboard_uuid},
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.askllm",
+        "WFWorkflowActionParameters": {
+            "WFLLMPrompt": make_text_with_variable("Improve this text: ", clipboard_uuid, "Clipboard"),
+            "WFGenerativeResultType": "Text",
+            "UUID": llm_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+        "WFWorkflowActionParameters": {
+            "WFNotificationActionBody": make_attachment(llm_uuid, "Use Model"),
+            "WFNotificationActionTitle": "Improved Text",
+        },
+    },
+]
+```
+
+---
+
+#### Summarize Text
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.SummarizeTextIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text to summarize |
+| `summaryType` | String | No | `"summarize"` (default) or `"createKeyPoints"` |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+summary_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.SummarizeTextIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "summaryType": "summarize",
+        "UUID": summary_uuid,
+    },
+}
+```
+
+---
+
+#### Rewrite Text
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.RewriteTextIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text to rewrite |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+rewrite_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.RewriteTextIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "UUID": rewrite_uuid,
+    },
+}
+```
+
+---
+
+#### Proofread Text
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.ProofreadIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text to proofread |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+proofread_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.ProofreadIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "UUID": proofread_uuid,
+    },
+}
+```
+
+---
+
+#### Adjust Tone
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.AdjustToneIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text |
+| `tone` | String | Yes | `"friendly"`, `"professional"`, or `"concise"` |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+tone_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.AdjustToneIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "tone": "professional",
+        "UUID": tone_uuid,
+    },
+}
+```
+
+---
+
+#### Make List
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.FormatListIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text to format as a list |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+list_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.FormatListIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "UUID": list_uuid,
+    },
+}
+```
+
+---
+
+#### Make Table
+
+**Identifier:** `com.apple.WritingTools.WritingToolsAppIntentsExtension.FormatTableIntent`
+
+**Requires:** macOS 15.1+, Apple Intelligence
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `text` | Variable | Yes | Variable reference to the text to format as a table |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+table_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier":
+        "com.apple.WritingTools.WritingToolsAppIntentsExtension.FormatTableIntent",
+    "WFWorkflowActionParameters": {
+        "text": make_attachment(input_uuid, "Input"),
+        "UUID": table_uuid,
+    },
+}
+```
+
+> **Note on Image Playground:** The Image Playground action identifier is TBD — it needs extraction from macOS 26 with Image Playground enabled.
+
+---
+
+### Tier 6: Control Flow
+
+> **Note:** Prefer using the builder template helpers (`make_if_block`, `make_repeat_count`, `make_repeat_each`, `make_menu`) over manual construction of control flow actions. The helpers handle `GroupingIdentifier` and `WFControlFlowMode` values automatically and are less error-prone.
+
+#### Comment
+
+**Identifier:** `is.workflow.actions.comment`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFCommentActionText` | String | Yes | Comment text (displayed in Shortcuts editor, not executed) |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
+    "WFWorkflowActionParameters": {
+        "WFCommentActionText": "This section handles the file processing",
+    },
+}
+```
+
+---
+
+#### If / Otherwise / End If
+
+**Identifier:** `is.workflow.actions.conditional`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFCondition` | Int/String | Yes | Condition type (e.g., `100` for "is", `101` for "is not") |
+| `WFConditionalActionString` | String | No | Value to compare against |
+| `GroupingIdentifier` | String | Yes | Shared UUID linking If/Otherwise/End If |
+| `WFControlFlowMode` | Int | Yes | `0` = If, `1` = Otherwise, `2` = End If |
+| `WFInput` | Variable ref | No | The variable to evaluate |
+
+```python
+# Prefer make_if_block() helper from builder_template.py
+group_id = new_uuid()
+
+actions = [
+    # If block (mode 0)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "WFCondition": 100,
+            "WFConditionalActionString": "hello",
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 0,
+            "WFInput": make_attachment(input_uuid, "Input"),
+        },
+    },
+    # ... actions inside If ...
+    # Otherwise block (mode 1)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 1,
+        },
+    },
+    # ... actions inside Otherwise ...
+    # End If block (mode 2)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 2,
+        },
+    },
+]
+```
+
+---
+
+#### Repeat (Count)
+
+**Identifier:** `is.workflow.actions.repeat.count`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFRepeatCount` | Int | Yes | Number of times to repeat |
+| `GroupingIdentifier` | String | Yes | Shared UUID linking Start/End Repeat |
+| `WFControlFlowMode` | Int | Yes | `0` = Start Repeat, `2` = End Repeat |
+
+```python
+# Prefer make_repeat_count() helper from builder_template.py
+group_id = new_uuid()
+
+actions = [
+    # Start Repeat (mode 0)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+        "WFWorkflowActionParameters": {
+            "WFRepeatCount": 3,
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 0,
+        },
+    },
+    # ... repeated actions ...
+    # End Repeat (mode 2)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 2,
+        },
+    },
+]
+```
+
+---
+
+#### Repeat with Each
+
+**Identifier:** `is.workflow.actions.repeat.each`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFInput` | Variable | Yes | Variable reference to the list to iterate over |
+| `GroupingIdentifier` | String | Yes | Shared UUID linking Start/End Repeat |
+| `WFControlFlowMode` | Int | Yes | `0` = Start Repeat, `2` = End Repeat |
+
+```python
+# Prefer make_repeat_each() helper from builder_template.py
+group_id = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.each",
+        "WFWorkflowActionParameters": {
+            "WFInput": make_attachment(list_uuid, "List"),
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 0,
+        },
+    },
+    # Use make_magic_variable("Repeat Item") inside the loop
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.each",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 2,
+        },
+    },
+]
+```
+
+---
+
+#### Choose from Menu
+
+**Identifier:** `is.workflow.actions.choosefrommenu`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFMenuPrompt` | String | No | Prompt shown to the user |
+| `WFMenuItems` | Array | Yes | Array of menu item dicts with `WFItemType` and `WFMenuItemTitle` |
+| `WFMenuItemTitle` | String | Yes (in cases) | Title of this menu item branch |
+| `GroupingIdentifier` | String | Yes | Shared UUID linking all menu actions |
+| `WFControlFlowMode` | Int | Yes | `0` = Menu start, `1` = menu case, `2` = End Menu |
+
+```python
+# Prefer make_menu() helper from builder_template.py
+group_id = new_uuid()
+
+actions = [
+    # Menu start (mode 0)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "WFMenuPrompt": "Choose an option",
+            "WFMenuItems": [
+                {"WFItemType": 0, "WFMenuItemTitle": "Option A"},
+                {"WFItemType": 0, "WFMenuItemTitle": "Option B"},
+            ],
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 0,
+        },
+    },
+    # Option A case (mode 1)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "WFMenuItemTitle": "Option A",
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 1,
+        },
+    },
+    # ... actions for Option A ...
+    # Option B case (mode 1)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "WFMenuItemTitle": "Option B",
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 1,
+        },
+    },
+    # ... actions for Option B ...
+    # End Menu (mode 2)
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
+        "WFWorkflowActionParameters": {
+            "GroupingIdentifier": group_id,
+            "WFControlFlowMode": 2,
+        },
+    },
+]
+```
+
+---
+
+#### Set Variable
+
+**Identifier:** `is.workflow.actions.setvariable`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFVariableName` | String | Yes | Name to assign to the variable |
+| `WFInput` | Variable | Yes | Variable reference to store |
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
+    "WFWorkflowActionParameters": {
+        "WFVariableName": "MyResult",
+        "WFInput": make_attachment(source_uuid, "Previous Action"),
+    },
+}
+```
+
+---
+
+#### Get Variable
+
+**Identifier:** `is.workflow.actions.getvariable`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFVariable` | Variable ref | Yes | Reference to the named variable to retrieve |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+get_var_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
+    "WFWorkflowActionParameters": {
+        "WFVariable": {
+            "Value": {"Type": "Variable", "VariableName": "MyResult"},
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
+        "UUID": get_var_uuid,
+    },
+}
+```
+
+---
+
+#### Dictionary
+
+**Identifier:** `is.workflow.actions.dictionary`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFItems` | Dict | Yes | The dictionary data structure |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+dict_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.dictionary",
+    "WFWorkflowActionParameters": {
+        "WFItems": {
+            "Value": {
+                "WFDictionaryFieldValueItems": [
+                    {
+                        "WFItemType": 0,
+                        "WFKey": {"Value": {"string": "name"}, "WFSerializationType": "WFTextTokenString"},
+                        "WFValue": {"Value": {"string": "Alice"}, "WFSerializationType": "WFTextTokenString"},
+                    }
+                ]
+            },
+            "WFSerializationType": "WFDictionaryFieldValue",
+        },
+        "UUID": dict_uuid,
+    },
+}
+```
+
+---
+
+#### Get Dictionary Value
+
+**Identifier:** `is.workflow.actions.getvalueforkey`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFDictionaryKey` | String | Yes | Key to retrieve from the dictionary |
+| `WFInput` | Variable | Yes | Variable reference to the dictionary |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+value_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.getvalueforkey",
+    "WFWorkflowActionParameters": {
+        "WFDictionaryKey": "name",
+        "WFInput": make_attachment(dict_uuid, "Dictionary"),
+        "UUID": value_uuid,
+    },
+}
+```
+
+---
+
+#### List
+
+**Identifier:** `is.workflow.actions.list`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFItems` | Array | Yes | Array of items (strings, variables, or mixed) |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+list_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.list",
+    "WFWorkflowActionParameters": {
+        "WFItems": [
+            {"WFItemType": 0, "WFValue": {"Value": {"string": "apple"}, "WFSerializationType": "WFTextTokenString"}},
+            {"WFItemType": 0, "WFValue": {"Value": {"string": "banana"}, "WFSerializationType": "WFTextTokenString"}},
+        ],
+        "UUID": list_uuid,
+    },
+}
+```
+
+---
+
+#### Get Item from List
+
+**Identifier:** `is.workflow.actions.getitemfromlist`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFItemSpecifier` | String | Yes | `"First Item"`, `"Last Item"`, `"Random Item"`, or `"Item At Index"` |
+| `WFItemIndex` | Int | No | Zero-based index (only when `WFItemSpecifier` is `"Item At Index"`) |
+| `WFInput` | Variable | Yes | Variable reference to the list |
+| `UUID` | String | Yes | UUID for referencing this action's output |
+
+```python
+item_uuid = new_uuid()
+
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.getitemfromlist",
+    "WFWorkflowActionParameters": {
+        "WFItemSpecifier": "First Item",
+        "WFInput": make_attachment(list_uuid, "List"),
+        "UUID": item_uuid,
+    },
+}
+```
+
+---
+
+#### Output
+
+**Identifier:** `is.workflow.actions.output`
+
+**Requires:** macOS 12+
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `WFOutput` | Variable ref | Yes | Variable reference to the value to output |
+
+> **Note:** This action provides stdout output when running via `shortcuts run` from the command line. Use it as the final action in shortcuts intended for CLI use.
+
+```python
+{
+    "WFWorkflowActionIdentifier": "is.workflow.actions.output",
+    "WFWorkflowActionParameters": {
+        "WFOutput": make_attachment(result_uuid, "Previous Action"),
+    },
+}
+```
+
+**Variable wiring example:**
+
+```python
+# Full pipeline: clipboard → summarize → output to stdout
+clipboard_uuid = new_uuid()
+summary_uuid = new_uuid()
+
+actions = [
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+        "WFWorkflowActionParameters": {"UUID": clipboard_uuid},
+    },
+    {
+        "WFWorkflowActionIdentifier":
+            "com.apple.WritingTools.WritingToolsAppIntentsExtension.SummarizeTextIntent",
+        "WFWorkflowActionParameters": {
+            "text": make_attachment(clipboard_uuid, "Clipboard"),
+            "summaryType": "summarize",
+            "UUID": summary_uuid,
+        },
+    },
+    {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.output",
+        "WFWorkflowActionParameters": {
+            "WFOutput": make_attachment(summary_uuid, "Summarize Text"),
+        },
+    },
+]
+```
